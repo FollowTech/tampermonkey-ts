@@ -6,7 +6,7 @@ module.exports = {
         // 使用corejs的方式 "usage" 表示按需加载
         "useBuiltIns": "usage",
         "corejs": {
-          "version": 3
+          "version": "3.34.0"
         },
       }
     ]

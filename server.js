@@ -11,18 +11,18 @@ const url = require('url');
 const dialog = require('dialog');
 const crypto = require('crypto');
 const chokidar = require('chokidar');
-const open = require('open');
+const open = import('open');
 const path = require('path');
 
 
-const error = function(m) {
+const error = function (m) {
     console.error(m);
     if (!args['no-dialog']) {
         dialog.err(m, 'TamperDAV');
     }
 };
 
-const warn = function(m) {
+const warn = function (m) {
     console.warn(m);
     if (!args['no-dialog']) {
         dialog.warn(m, 'TamperDAV');
@@ -41,16 +41,16 @@ if (fs.existsSync(config)) {
     }
 }
 
-[ 'username', 'password' ].forEach(function(k) { args[k] = args[k] || process.env['TD_' + k.toUpperCase()]; });
+['username', 'password'].forEach(function (k) { args[k] = args[k] || process.env['TD_' + k.toUpperCase()]; });
 
-process.argv.forEach(function(val/*, index, array*/) {
+process.argv.forEach(function (val/*, index, array*/) {
     var s = val.replace(/^[-]{1,2}/, '').split('=');
     args[s[0]] = s[1] || true;
 });
 
 if (process.argv.includes('--help')) {
     console.log(
-`Usage: ${process.platform === 'win32' ? 'TamperDAV.bat' : './tamperdav.sh'} [options]
+        `Usage: ${process.platform === 'win32' ? 'TamperDAV.bat' : './tamperdav.sh'} [options]
 Starts a WebDAV server using Node.js
 
 Options:
@@ -92,7 +92,7 @@ command line parameters.
     process.exit(0);
 }
 
-global.btoa = function(s) {
+global.btoa = function (s) {
     if (typeof Buffer.from === 'function') {
         return Buffer.from(s, 'base64').toString(); // Node 5.10+
     } else {
@@ -104,7 +104,7 @@ if (!args.path) {
     return error('path arguments missing');
 }
 
-const working_dir = path.resolve(__dirname,'dist')
+const working_dir = path.resolve(__dirname, 'dist')
 if (!fs.existsSync(working_dir)) {
     return error('working directory missing');
 }
@@ -113,7 +113,7 @@ if (!args['no-auth-warning'] && (!args.username || !args.password)) {
     warn('TamperDAV is running without any form of authentication. It\'s strongly recommended to configure username and password!', 'TamperDAV');
 }
 
-RegExp.escape = RegExp.escape || function(s) {
+RegExp.escape = RegExp.escape || function (s) {
     return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 };
 
@@ -122,19 +122,19 @@ const max_cursors = args['max-cursors'] || 512;
 var subscribers = {};
 
 const methods = {
-    options: function(uri, request, response) {
+    options: function (uri, request, response) {
         var allowed_methods = [
             'GET', 'HEAD', 'OPTIONS', 'PUT', 'PROPFIND', 'MKCOL', 'DELETE', 'SUBSCRIBE'
-        ].concat(args['open-in-editor'] ? [ 'EDITOR' ] : []).join(',');
+        ].concat(args['open-in-editor'] ? ['EDITOR'] : []).join(',');
 
         response.setHeader('Access-Control-Allow-Methods', allowed_methods);
-        response.setHeader('Access-Control-Allow-Credentials','true');
-        response.setHeader('Access-Control-Allow-Headers','Authorization,User-Agent,Content-Type,Accept,Origin,X-Requested-With,Cursor');
+        response.setHeader('Access-Control-Allow-Credentials', 'true');
+        response.setHeader('Access-Control-Allow-Headers', 'Authorization,User-Agent,Content-Type,Accept,Origin,X-Requested-With,Cursor');
 
         response.statusCode = 200;
         response.end();
     },
-    propfind: function(uri, request, response) {
+    propfind: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
@@ -146,7 +146,7 @@ const methods = {
 
         var xml;
         if (!fs.statSync(fpath).isDirectory()) {
-            xml = arrayToXml(rpath, [ '' ]);
+            xml = arrayToXml(rpath, ['']);
         } else {
             var wc = watcherCache[rpath];
             var files, d;
@@ -154,18 +154,18 @@ const methods = {
                 files = fs.readdirSync(fpath);
             }
 
-             xml = arrayToXml(rpath, [ '.' ].concat(files || []), wc && (!d || d > 0) ? wc.current_cursor : undefined);
+            xml = arrayToXml(rpath, ['.'].concat(files || []), wc && (!d || d > 0) ? wc.current_cursor : undefined);
         }
 
         response.statusCode = 207;
         response.setHeader('Content-Type', 'application/xml; charset=utf-8');
         response.end(xml);
     },
-    mkcol: function(uri, request, response) {
+    mkcol: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
-        if (fs.existsSync(fpath)){
+        if (fs.existsSync(fpath)) {
             response.statusCode = 405;
             response.end('<d:error xmlns:d="DAV:" xmlns:td="http://dav.tampermonkey.net/ns"><td:exception>MethodNotAllowed</td:exception><td:message>The resource you tried to create already exists</td:message></d:error>');
         } else {
@@ -178,17 +178,17 @@ const methods = {
             }
         }
     },
-    get: function(uri, request, response) {
+    get: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
-        if (fs.existsSync(fpath)){
+        if (fs.existsSync(fpath)) {
             let content;
             try {
                 content = fs.readFileSync(fpath);
                 response.statusCode = 200;
                 response.setHeader('Content-Type', 'application/octet-stream');
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 response.statusCode = 500;
                 content = e.message;
@@ -200,7 +200,7 @@ const methods = {
             response.end();
         }
     },
-    editor: function(uri, request, response) {
+    editor: function (uri, request, response) {
         var editor = args['open-in-editor'];
         if (!editor) {
             response.statusCode = 501;
@@ -217,7 +217,7 @@ const methods = {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
-        if (fs.existsSync(fpath)){
+        if (fs.existsSync(fpath)) {
             open(upath.resolve(fpath), { app: editor });
 
             response.setHeader('Location', `dav://${request.headers.host}${uri.pathname}`);
@@ -228,7 +228,7 @@ const methods = {
             response.end();
         }
     },
-    put: function(uri, request, response) {
+    put: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
@@ -254,7 +254,7 @@ const methods = {
             response.end();
         });
     },
-    delete: function(uri, request, response) {
+    delete: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
@@ -268,12 +268,12 @@ const methods = {
             response.end();
         }
     },
-    head: function(uri, request, response) {
+    head: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
         var done, stats;
-        if (fs.existsSync(fpath)){
+        if (fs.existsSync(fpath)) {
             try {
                 stats = fs.statSync(fpath);
             } catch (e) {
@@ -292,7 +292,7 @@ const methods = {
             response.end();
         }
     },
-    subscribe: function(uri, request, response) {
+    subscribe: function (uri, request, response) {
         var rpath = uri.pathname;
         var fpath = upath.join(working_dir, rpath);
 
@@ -309,7 +309,7 @@ const methods = {
         }
 
         var id = crypto.randomBytes(16).toString('hex');
-        var to = global.setTimeout(function() {
+        var to = global.setTimeout(function () {
             delete subscribers[rpath][id];
 
             if (response.finished) return;
@@ -330,14 +330,14 @@ const methods = {
     }
 };
 
-const getUrlArgs = function(url) {
+const getUrlArgs = function (url) {
     var c = {};
     var p = url.replace(/^\?/, '');
 
     var args = p.split('&');
     var pair;
 
-    for (var i=0; i<args.length; i++) {
+    for (var i = 0; i < args.length; i++) {
         pair = args[i].split('=');
         if (pair.length != 2) {
             var p1 = pair[0];
@@ -350,10 +350,10 @@ const getUrlArgs = function(url) {
     return c;
 };
 
-const arrayToXml = function(rpath, files, cursor) {
+const arrayToXml = function (rpath, files, cursor) {
     var fpath = upath.join(working_dir, rpath);
 
-    var entries = files.map(function(file) {
+    var entries = files.map(function (file) {
         var name = file;
         var cpath = upath.join(fpath, name);
 
@@ -375,17 +375,17 @@ const arrayToXml = function(rpath, files, cursor) {
 
         return [
             '<d:response>',
-                `<d:href>${upath.join(rpath, name)}</d:href>`,
-                '<d:propstat>',
-                    '<d:prop>',
-                        `<d:getlastmodified>${lastmodified}</d:getlastmodified>`,
-                        dir ? '<d:resourcetype><d:collection/></d:resourcetype>' : '<d:resourcetype />',
-                        !dir ? `<d:getcontentlength>${size}</d:getcontentlength>` : '<d:getcontentlength />',
-                    '</d:prop>',
-                    '<d:status>HTTP/1.1 200 OK</d:status>',
-                '</d:propstat>',
+            `<d:href>${upath.join(rpath, name)}</d:href>`,
+            '<d:propstat>',
+            '<d:prop>',
+            `<d:getlastmodified>${lastmodified}</d:getlastmodified>`,
+            dir ? '<d:resourcetype><d:collection/></d:resourcetype>' : '<d:resourcetype />',
+            !dir ? `<d:getcontentlength>${size}</d:getcontentlength>` : '<d:getcontentlength />',
+            '</d:prop>',
+            '<d:status>HTTP/1.1 200 OK</d:status>',
+            '</d:propstat>',
             '</d:response>',
-        ].filter(function(e) { return e; }).join('\n');
+        ].filter(function (e) { return e; }).join('\n');
     }).join('\n');
     var new_cursor = cursor ? `<td:cursor>${cursor}</td:cursor>` : '';
     return `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:td="http://dav.tampermonkey.net/ns">${entries}${new_cursor}</d:multistatus>`;
@@ -393,14 +393,14 @@ const arrayToXml = function(rpath, files, cursor) {
 };
 
 var watchers = {};
-const notifySubscribers = function(rpath, changed_files, cursor) {
+const notifySubscribers = function (rpath, changed_files, cursor) {
     var a;
 
     if ((a = subscribers[rpath])) {
         subscribers[rpath] = {};
         var xml = arrayToXml(rpath, changed_files, cursor);
 
-        Object.keys(a).forEach(function(k) {
+        Object.keys(a).forEach(function (k) {
             var o = a[k];
             var response = o.response;
 
@@ -416,21 +416,21 @@ const notifySubscribers = function(rpath, changed_files, cursor) {
 
 var watcherCache = {};
 
-const sendCachedWatcherChanges = function(rpath, from_cursor) {
+const sendCachedWatcherChanges = function (rpath, from_cursor) {
     var wc, cc;
     if (!(wc = watcherCache[rpath])) {
         return;
     }
-    for (var i=from_cursor; i<=wc.current_cursor; i++) {
+    for (var i = from_cursor; i <= wc.current_cursor; i++) {
         if ((cc = wc.changes[i])) {
-            notifySubscribers(rpath, Object.keys(cc), i+1);
+            notifySubscribers(rpath, Object.keys(cc), i + 1);
         }
     }
 
     var k;
     if ((k = Object.keys(wc.changes)) && k.length > max_cursors) {
         var m = wc.current_cursor - max_cursors + 1;
-        k.forEach(function(e) {
+        k.forEach(function (e) {
             if (e < m) delete wc.changes[e];
         });
     }
@@ -438,7 +438,7 @@ const sendCachedWatcherChanges = function(rpath, from_cursor) {
     return true;
 };
 
-const assureWatcher = function(rpath) {
+const assureWatcher = function (rpath) {
     if (watchers[rpath]) return;
 
     var fpath = upath.join(working_dir, rpath);
@@ -449,7 +449,7 @@ const assureWatcher = function(rpath) {
         ignoreInitial: true
     });
 
-    w.on('add', (onchange = function(_path) {
+    w.on('add', (onchange = function (_path) {
         var path = upath.normalize(_path);
         var cc;
         var filename = path.replace(new RegExp('^' + RegExp.escape(fpath) + '\/?'), '');
@@ -480,29 +480,29 @@ const assureWatcher = function(rpath) {
             global.clearTimeout(wc.to);
         }
         // collect all changes until there is no change for one second
-        wc.to = global.setTimeout(function() {
+        wc.to = global.setTimeout(function () {
             sendCachedWatcherChanges(rpath, wc.current_cursor);
             var o = watcherCache[rpath];
             o.to = null;
             wc.current_cursor++;
         }, 1000);
     }))
-    .on('change', onchange)
-    .on('unlink', onchange)
-    .on('error', function() {
-        notifySubscribers(rpath, wc ? wc.changes : []);
-    });
+        .on('change', onchange)
+        .on('unlink', onchange)
+        .on('error', function () {
+            notifySubscribers(rpath, wc ? wc.changes : []);
+        });
 
     watchers[rpath] = w;
 };
 
-const requestHandler = function(request, response) {
+const requestHandler = function (request, response) {
     var uri = url.parse(request.url);
     var url_args = getUrlArgs(uri.search || '');
     var method = url_args.method || request.method.toLowerCase();
     var m;
 
-    request.on('error', function(err) {
+    request.on('error', function (err) {
         console.error(err.stack);
     });
 
@@ -510,11 +510,11 @@ const requestHandler = function(request, response) {
         var sh = response.setHeader;
         var e = response.end;
 
-        response.setHeader = function() {
+        response.setHeader = function () {
             console.log('response.setHeader', arguments);
             sh.apply(response, arguments);
         };
-        response.end = function() {
+        response.end = function () {
             console.log('response.end', arguments);
             e.apply(response, arguments);
         };
@@ -551,7 +551,7 @@ const requestHandler = function(request, response) {
 const server = http.createServer(requestHandler);
 const host = args.host || 'localhost';
 
-server.listen(port, host, function(err) {
+server.listen(port, host, function (err) {
     if (err) {
         return console.log(err);
     }

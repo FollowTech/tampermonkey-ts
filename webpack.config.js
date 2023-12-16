@@ -1,7 +1,5 @@
 const path = require('path');
 const BannerPlugin = require('webpack/lib/BannerPlugin')
-const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin')
-const {CheckerPlugin} = require('awesome-typescript-loader')
 const TerserPlugin = require('terser-webpack-plugin')
 const fs = require('fs')
 const argv = require('yargs').argv;
@@ -42,9 +40,26 @@ module.exports = async () => {
         module: {
             rules: [{
                 test: /\.ts$/,
-                use: [
-                    'babel-loader',
-                    'awesome-typescript-loader'
+                use: [{
+                    loader: 'babel-loader',
+                    options: {
+                        presets: [
+                            [
+                                "@babel/preset-env",
+                                {
+                                    targets: {
+                                    },
+                                    "corejs": "3.34.0",
+                                    "useBuiltIns": "usage"
+                                }
+                            ]
+                        ]
+                    }
+                },
+                {
+                    loader: "ts-loader",
+                }
+
                 ],
                 exclude: /header/
             }]
@@ -55,9 +70,7 @@ module.exports = async () => {
             ]
         },
         plugins: [
-            new FriendlyErrorsWebpackPlugin(),
-            new CheckerPlugin(),
-            new TerserPlugin(),
+            // new TerserPlugin(),
             new BannerPlugin({
                 banner: header,
                 raw: true
